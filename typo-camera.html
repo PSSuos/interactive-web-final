@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>타이포 카메라 with BodyPix + CASL</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: black;
+      overflow: hidden;
+      width: 100vw; height: 100vh;
+    }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #grid {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      font-family: 'Recursive', monospace;
+      font-size: 1.8vmin;
+      line-height: 4.8;
+      letter-spacing: -0.1vmin;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+      background: black;
+      grid-template-columns: repeat(100, 1fr);
+      grid-template-rows: repeat(60, 1fr);
+    }
+    .cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+      padding: 0;
+      margin: 0;
+      width: 1fr;
+      height: 1fr;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    #video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+    }
+    #maskVideo {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 1;
+      z-index: 1;
+    }
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+    }
+    #textLayer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+    #editableText {
+      width: 100vw;
+      height: 100vh;
+      color: transparent;
+      font-family: 'Inter', sans-serif;
+      font-weight: 900;
+      font-size: 16vmin;
+      line-height: 1.2;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      text-align: left;
+      pointer-events: auto;
+      padding: 0;
+      margin: 0vh 0vw 0 1vw;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+
+    .main-ui {
+      position: fixed;
+      top: 0.625rem;
+      right: 1.2rem;
+      display: flex;
+      gap: 1.5rem;
+      font-size: 1.25rem;
+      opacity: 1;
+      pointer-events: auto;
+      transition: opacity 1s ease;
+      z-index: 10000;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+    }
+    .menu-buttons {
+      display: flex; gap: 3rem;
+    }
+    .menu-item {
+      font-family: 'Recursive', sans-serif;
+      font-size: 1.2rem;
+      color: #000;
+      text-decoration: none;
+      transition: color 0.3s ease, transform 0.3s ease;
+      cursor: pointer;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+      background: transparent;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      text-shadow:
+        -1px -1px 0 #fff,
+         1px -1px 0 #fff,
+        -1px  1px 0 #fff,
+         1px  1px 0 #fff;
+    }
+    .menu-item:hover {
+      color: #888;
+      transform: scale(1.05);
+    }
+  </style>
+
+  <!-- Recursive Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Recursive:slnt,wght,CASL,MONO@0..-15,300..1000,0..1,0..1&display=swap" rel="stylesheet" />
+  <!-- Sans Linear Black Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
+
+</head>
+<body>
+  <div id="container">
+    <div class="main-ui">
+      <div class="menu-buttons">
+        <div class="menu-item" id="homeButton">Home</div>
+      </div>
+    </div>
+    <video id="video" autoplay playsinline></video>
+    <video id="maskVideo" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="grid"></div>
+    <div id="textLayer">
+      <textarea id="editableText" spellcheck="false">타이포그래피는 정지된 구조가 아닌, 몸의 떨림에 반응해 피어나는 감각의 흔적이며, 흐르는 영상의 시간의 결 위를 유영하는 한 조각이다.</textarea>
+    </div>
+  </div>
+
+  <!-- TensorFlow + BodyPix -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix"></script>
+
+  <script>
+    // 단어 목록
+    const wordList = [
+      'Fluidity', 'Instability', 'in', 'flux', 'unfixed', 'elastic', 'dissolve', 'leak', 'permeate',
+      'Body', 'Movement', 'gesture', 'pulse', 'breath', 'tremor', 'residue', 'trace',
+      'Sensation', 'Perception', 'sensing', 'haptic', 'touch', 'blur', 'surge', 'glitch',
+      'Time', 'Video', 'Frame', 'temporal', 'frame', 'latency', 'flicker', 'duration', 'live', 'collapse', 'fragment', 'shatter', 'unform', 're-code', 'drift'
+    ];
+
+
+    let fixedText = [];
+    let fixedStyles = [];
+    let currentRow = 59; 
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const grid = document.getElementById('grid');
+    const cells = [];
+    let total = 0;
+    let lastUpdateTime = 0;
+    const INITIAL_UPDATE_INTERVAL = 50;
+    const NORMAL_UPDATE_INTERVAL = 2500;
+    let isInitialFilling = true;
+    let lastSegmentation = null;
+    let lastImageData = null;
+    let frameCount = 0;
+    let isProcessing = false;
+    let isInteractionEnabled = false;
+
+
+    const fontStyles = [
+      '"wght" 400, "CASL" 0.3, "MONO" 0, "slnt" -5',
+      '"wght" 400, "CASL" 0.7, "MONO" 1, "slnt" -10',
+      '"wght" 400, "CASL" 0.5, "MONO" 0, "slnt" -15',
+      '"wght" 400, "CASL" 0.2, "MONO" 1, "slnt" -8',
+      '"wght" 400, "CASL" 0.8, "MONO" 0, "slnt" -12',
+      '"wght" 400, "CASL" 0.4, "MONO" 1, "slnt" -7',
+      '"wght" 400, "CASL" 0.6, "MONO" 0, "slnt" -9',
+      '"wght" 400, "CASL" 0.9, "MONO" 1, "slnt" -11',
+      '"wght" 400, "CASL" 0.1, "MONO" 0, "slnt" -6',
+      '"wght" 400, "CASL" 0.5, "MONO" 1, "slnt" -13'
+    ];
+
+
+    function createGrid() {
+      const gridWidth = 100;
+      const gridHeight = 60;
+      
+      total = gridWidth * gridHeight;
+
+      const shuffledWords = [...wordList].sort(() => Math.random() - 0.5);
+      let currentIndex = 0;
+      let wordIndex = 0;
+
+      while (currentIndex < total) {
+        const word = shuffledWords[wordIndex % shuffledWords.length];
+        const fontStyle = fontStyles[wordIndex % fontStyles.length];
+        wordIndex++;
+        
+        const letters = word.split('');
+        letters[0] = letters[0].toUpperCase();
+        
+        for (let i = 0; i < letters.length; i++) {
+          if (currentIndex >= total) break;
+          fixedText[currentIndex] = letters[i];
+          fixedStyles[currentIndex] = fontStyle;
+          currentIndex++;
+        }
+        
+        if (currentIndex < total && Math.random() > 0.5) {
+          fixedText[currentIndex] = ' ';
+          fixedStyles[currentIndex] = fontStyle;
+          currentIndex++;
+        }
+      }
+
+
+      for (let i = 0; i < total; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = ' ';
+        cell.style.fontVariationSettings = fixedStyles[i];
+        grid.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+
+
+    function addNewRow() {
+      const gridWidth = 100;
+      const currentTime = Date.now();
+      const updateInterval = isInitialFilling ? INITIAL_UPDATE_INTERVAL : NORMAL_UPDATE_INTERVAL;
+      
+      if (currentTime - lastUpdateTime >= updateInterval) {
+        if (isInitialFilling) {
+
+          if (currentRow >= 0) {
+
+            const shuffledWords = [...wordList].sort(() => Math.random() - 0.5);
+            let wordIndex = 0;
+            let currentIndex = currentRow * gridWidth;
+            
+            while (currentIndex < (currentRow + 1) * gridWidth) {
+              const word = shuffledWords[wordIndex % shuffledWords.length];
+              const fontStyle = fontStyles[Math.floor(Math.random() * fontStyles.length)];
+              wordIndex++;
+              
+              const letters = word.split('');
+              letters[0] = letters[0].toUpperCase();
+              
+              for (let i = 0; i < letters.length; i++) {
+                if (currentIndex >= (currentRow + 1) * gridWidth) break;
+                fixedText[currentIndex] = letters[i];
+                fixedStyles[currentIndex] = fontStyle;
+                cells[currentIndex].textContent = letters[i];
+                currentIndex++;
+              }
+              
+              if (currentIndex < (currentRow + 1) * gridWidth && Math.random() > 0.7) {
+                fixedText[currentIndex] = ' ';
+                fixedStyles[currentIndex] = fontStyle;
+                cells[currentIndex].textContent = ' ';
+                currentIndex++;
+              }
+            }
+            currentRow--;
+          }
+        } else {
+
+          for (let y = 0; y < 59; y++) {
+            for (let x = 0; x < gridWidth; x++) {
+              const currentIndex = y * gridWidth + x;
+              const nextIndex = (y + 1) * gridWidth + x;
+              cells[currentIndex].textContent = cells[nextIndex].textContent;
+              cells[currentIndex].style.fontVariationSettings = cells[nextIndex].style.fontVariationSettings;
+            }
+          }
+
+
+          const shuffledWords = [...wordList].sort(() => Math.random() - 0.5);
+          let wordIndex = 0;
+          let currentIndex = 59 * gridWidth;
+          
+          while (currentIndex < total) {
+            const word = shuffledWords[wordIndex % shuffledWords.length];
+            const fontStyle = fontStyles[Math.floor(Math.random() * fontStyles.length)];
+            wordIndex++;
+            
+            const letters = word.split('');
+            letters[0] = letters[0].toUpperCase();
+            
+            for (let i = 0; i < letters.length; i++) {
+              if (currentIndex >= total) break;
+              fixedText[currentIndex] = letters[i];
+              fixedStyles[currentIndex] = fontStyle;
+              cells[currentIndex].textContent = letters[i];
+              cells[currentIndex].style.fontVariationSettings = fontStyle;
+              currentIndex++;
+            }
+            
+            if (currentIndex < total && Math.random() > 0.7) {
+              fixedText[currentIndex] = ' ';
+              fixedStyles[currentIndex] = fontStyle;
+              cells[currentIndex].textContent = ' ';
+              cells[currentIndex].style.fontVariationSettings = fontStyle;
+              currentIndex++;
+            }
+          }
+        }
+
+        lastUpdateTime = currentTime;
+
+        if (isInitialFilling && currentRow < 0) {
+          isInitialFilling = false;
+          isInteractionEnabled = true;
+          console.log('Initial loading complete, interaction enabled');
+        }
+      }
+    }
+
+    async function setupWebcam() {
+      return new Promise((resolve, reject) => {
+        navigator.mediaDevices.getUserMedia({ 
+          video: true
+        })
+          .then((stream) => {
+            video.srcObject = stream;
+            maskVideo.srcObject = stream;
+            video.onloadedmetadata = () => {
+              video.play();
+              maskVideo.play();
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              createGrid();
+              resolve();
+            };
+          })
+          .catch(reject);
+      });
+    }
+
+
+    function applyVideoBackground() {
+      const textArea = document.getElementById('editableText');
+      const maskVideo = document.getElementById('maskVideo');
+      
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      canvas.width = 1920;  
+      canvas.height = 1080;
+      
+      let lastFrameTime = 0;
+      const frameInterval = 1000 / 30; 
+      
+      function draw(currentTime) {
+        if (currentTime - lastFrameTime < frameInterval) {
+          requestAnimationFrame(draw);
+          return;
+        }
+        
+        lastFrameTime = currentTime;
+        
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(maskVideo, 0, 0, canvas.width, canvas.height);
+        
+
+        const newUrl = canvas.toDataURL('image/jpeg', 0.8); 
+        textArea.style.backgroundImage = `url(${newUrl})`;
+        textArea.style.backgroundSize = 'cover';
+        textArea.style.backgroundPosition = 'center';
+        textArea.style.backgroundClip = 'text';
+        textArea.style.webkitBackgroundClip = 'text';
+        
+        requestAnimationFrame(draw);
+      }
+      
+      requestAnimationFrame(draw);
+    }
+
+    async function main() {
+      await setupWebcam();
+      
+
+      const constraints = {
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        }
+      };
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        maskVideo.srcObject = stream;
+        
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play();
+            maskVideo.play();
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            createGrid();
+            resolve();
+          };
+        });
+        
+        applyVideoBackground();
+        const net = await bodyPix.load();
+
+        const segmentationConfig = {
+          flipHorizontal: true,
+          internalResolution: 'medium',
+          segmentationThreshold: 0.5,
+          maxDetections: 1,
+          scoreThreshold: 0.3
+        };
+
+        let lastProcessTime = 0;
+        const PROCESS_INTERVAL = 100; 
+
+        async function processFrame() {
+          const currentTime = Date.now();
+          if (isProcessing || currentTime - lastProcessTime < PROCESS_INTERVAL) return;
+          
+          isProcessing = true;
+          lastProcessTime = currentTime;
+
+          try {
+            ctx.drawImage(video, 0, 0);
+            lastImageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            lastSegmentation = await net.segmentPerson(video, segmentationConfig);
+          } catch (error) {
+            console.error('Frame processing error:', error);
+          } finally {
+            isProcessing = false;
+          }
+        }
+
+        async function render() {
+          frameCount++;
+          
+          if (isInteractionEnabled && frameCount % 2 === 0) { 
+            await processFrame();
+          }
+
+          addNewRow();
+
+    
+          if (isInteractionEnabled && lastSegmentation && lastImageData) {
+            const updateCells = new Set();
+            
+
+            for (let y = 0; y < 60; y++) {
+              for (let x = 0; x < 100; x++) {
+                const segX = Math.floor((x / 100) * lastSegmentation.width);
+                const segY = Math.floor((y / 60) * lastSegmentation.height);
+                const segIndex = segY * lastSegmentation.width + segX;
+                
+                if (lastSegmentation.data[segIndex] === 1) {
+                  updateCells.add(y * 100 + x);
+                }
+              }
+            }
+
+
+            updateCells.forEach(cellIndex => {
+              const cell = cells[cellIndex];
+              if (!cell || cell.textContent === ' ') return;
+
+              const x = cellIndex % 100;
+              const y = Math.floor(cellIndex / 100);
+
+              const videoX = Math.floor((x / 100) * video.videoWidth);
+              const videoY = Math.floor((y / 60) * video.videoHeight);
+              const pixelIndex = (videoY * video.videoWidth + videoX) * 4;
+
+              const r = lastImageData[pixelIndex];
+              const g = lastImageData[pixelIndex + 1];
+              const b = lastImageData[pixelIndex + 2];
+              const brightness = (r + g + b) / 3;
+              const weight = Math.floor((brightness / 255) * 900 + 100);
+
+
+              cell.style.fontSize = '2vmin';
+              cell.style.fontVariationSettings = `"wght" ${weight}, "CASL" 0, "MONO" 0, "slnt" 0`;
+              cell.style.transform = 'scale(1.05)';
+              cell.style.transformOrigin = 'center';
+            });
+
+            for (let i = 0; i < total; i++) {
+              if (!updateCells.has(i)) {
+                const cell = cells[i];
+                if (cell && cell.textContent !== ' ') {
+                  cell.style.fontSize = '1.8vmin';
+                  cell.style.fontVariationSettings = fixedStyles[i];
+                  cell.style.transform = 'scale(1)';
+                }
+              }
+            }
+          }
+
+          requestAnimationFrame(render);
+        }
+
+        render();
+      } catch (error) {
+        console.error('Error accessing webcam:', error);
+      }
+    }
+
+    main();
+
+    document.getElementById('homeButton').addEventListener('click', () => {
+      window.location.href = 'index.html?opened=true';
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      const editableText = document.getElementById('editableText');
+      if (editableText) {
+        const fullText = editableText.value;
+        editableText.value = '';
+        let i = 0;
+        function typeNextChar() {
+          if (i <= fullText.length) {
+            editableText.value = fullText.slice(0, i);
+            i++;
+            setTimeout(typeNextChar, 40); 
+          }
+        }
+        typeNextChar();
+      }
+    });
+  </script>
+</body>
+</html> 

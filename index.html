@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Recursive - Opening</title>
+  <link href="https://fonts.googleapis.com/css2?family=Recursive:CASL,MONO,slnt,wght@0..1,0..1,-15..0,300..1000&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Global Styles */
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Recursive', sans-serif;
+      background-color: black;
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color 2.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  color 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.entered {
+      background-color: black;
+      color: white;
+    }
+
+    body.no-transition *, body.no-transition {
+      transition: none !important;
+    }
+
+    /* Main UI Components */
+    .opening {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 1;
+      background-color: black;
+      transition: background-color 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.entered .opening {
+      background-color: black;
+    }
+
+    .opening::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5rem;
+      background: rgba(0, 0, 0, 0.8);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2;
+      transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1) 2s;
+    }
+
+    body.entered .opening::before {
+      opacity: 0.5;
+    }
+
+    /* Title Styles */
+    .title {
+      position: fixed;
+      top: 0.625rem;
+      left: 0rem;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      transition: all 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 11;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+    }
+
+    .title.start {
+      top: 47%; left: 50%;
+      font-size: 7.5rem;
+      transform: translate(-50%, -50%);
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-block;
+    }
+
+    .title a:hover {
+      color: #888;
+      transform: scale(1.05);
+    }
+
+    /* Click Hint */
+    .click-hint {
+      position: absolute;
+      top: calc(50% + 4rem);
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.4rem;
+      opacity: 0;
+      transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 2;
+    }
+
+    .click-hint.visible {
+      opacity: 1;
+    }
+
+    .click-hint.entered { display:none; }
+
+    /* Menu UI */
+    .main-ui {
+      position: fixed;
+      top: 0.625rem;
+      right: 1.2rem;
+      display: flex;
+      gap: 1.5rem;
+      font-size: 1.25rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1s ease;
+      z-index: 11;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+    }
+
+    .main-ui.visible { opacity:1; pointer-events:auto; }
+
+    .menu-buttons {
+      display:flex; gap:3rem;
+    }
+
+    .menu-buttons div {
+      transition: color .3s ease, transform .3s ease;
+      cursor: pointer;
+    }
+
+    .menu-buttons div:hover {
+      color: #888;
+      transform: scale(1.05);
+    }
+
+    /* Information Panel */
+    #infoPanel {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #fff;
+      color: #111;
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      overflow: auto;
+      font-family: 'Recursive', sans-serif;
+    }
+
+    #infoPanel .info-content {
+      max-width: 800px;
+      margin: 3rem auto 2rem auto;
+      background: none;
+      padding: 2.5rem 2rem 2rem 2rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+      position: relative;
+    }
+
+    .info-title {
+      font-size: 5rem;
+      font-weight: 900;
+      margin-bottom: 1.5rem;
+      font-variation-settings: 'wght' 1000, 'CASL' 0, 'MONO' 0, 'slnt' 0;
+    }
+
+    .info-subtitle {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+    }
+
+    .info-desc {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+
+    .info-section {
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .info-section b {
+      font-size: 1.25rem;
+      font-weight: 900;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .info-close {
+      position: absolute;
+      top: 1.2rem;
+      right: 1.2rem;
+      background: none;
+      border: none;
+      font-size: 2.2rem;
+      color: #111;
+      cursor: pointer;
+      font-weight: 900;
+      z-index: 10;
+      transition: color 0.2s;
+    }
+
+    .info-close:hover {
+      color: #888;
+    }
+
+    /* Playground Panel */
+    #playgroundPanel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #90EE90;
+      color: #000;
+      display: none;
+      z-index: 10;
+      overflow: hidden;
+      cursor: none;
+    }
+
+    /* Text Sample */
+    #textSample {
+      mix-blend-mode: difference;
+      color: white;
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      font-size: 6vw;
+      line-height: 1.1;
+      word-spacing: -0.2em;
+      text-align: left;
+      white-space: normal;
+      word-break: break-all;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      cursor: none;
+    }
+
+    #textSample.visible {
+      opacity: 1;
+      pointer-events: auto;
+      cursor: none;
+    }
+
+    /* 2D Slider Handle */
+    .handle {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0;
+      background-color: transparent;
+      border: none;
+    }
+
+    /* Circle Container */
+    .circle-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 880px;
+      height: 880px;
+      pointer-events: auto;
+      z-index: 100;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      border-radius: 50%;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .circle-container::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 400px;
+      transform: translate(-50%, -50%);
+      background: transparent;
+      pointer-events: none;
+      z-index: -1;
+      border-radius: 50%;
+    }
+
+    .circle-base {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: auto;
+      transform-origin: center;
+      transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 101;
+    }
+
+    .circle {
+      width: 800px;
+      height: 800px;
+      background-color: rgba(180, 180, 180, 0.4);
+      position: absolute;
+      mix-blend-mode: difference;
+      transform: translate(-50%, -50%);
+      top: 50%;
+      left: 50%;
+    }
+
+    .circle-middle {
+      top: 50%;
+      left: 50%;
+      width: 500px;
+      height: 500px;
+      background-color: rgba(180, 180, 180, 0.35);
+      transform: translate(-50%, -50%);
+      position: relative;
+      mix-blend-mode: difference;
+    }
+
+    .circle-middle.slanted {
+      background-color: rgba(255, 0, 0, 0.4);
+    }
+
+    .circle-inner {
+      top: 50%;
+      left: 50%;
+      width: 200px;
+      height: 200px;
+      background-color: rgba(180, 180, 180, 0.3);
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      mix-blend-mode: difference;
+    }
+
+    /* Mouse Tracking Circle */
+    .mouse-tracker {
+      position: fixed;
+      width: 15px;
+      height: 15px;
+      background-color: rgba(255, 0, 0, 0.2);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease;
+    }
+
+    .slider-2d {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    /* Transition Text */
+    .transition-text {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.2rem;
+      color: white;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+      pointer-events: none;
+      text-align: center;
+      width: 100%;
+      display: none;
+    }
+
+    .transition-text.visible {
+      opacity: 1;
+    }
+
+    /* Typo Camera Styles */
+    #typoCameraPanel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: black;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    #container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #grid {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      font-family: 'Recursive', monospace;
+      font-size: 1.8vmin;
+      line-height: 4.8;
+      letter-spacing: -0.1vmin;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+      background: black;
+      grid-template-columns: repeat(100, 1fr);
+      grid-template-rows: repeat(60, 1fr);
+    }
+
+    .cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-variation-settings: "wght" 400, "CASL" 0, "MONO" 0, "slnt" 0;
+      padding: 0;
+      margin: 0;
+      width: 1fr;
+      height: 1fr;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    #video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+    }
+
+    #maskVideo {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 1;
+      z-index: 1;
+    }
+
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+    }
+
+    #textLayer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+
+    #editableText {
+      width: 100vw;
+      height: 100vh;
+      color: transparent;
+      font-family: 'Inter', sans-serif;
+      font-weight: 900;
+      font-size: 14vmin;
+      line-height: 1.2;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      text-align: left;
+      pointer-events: auto;
+      padding: 0;
+      margin: 0vh 0vw 0 1vw;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    @keyframes scrollTitle {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    #scrollingTitleBar {
+      position: fixed;
+      top: 2.5rem;
+      left: 0;
+      width: 100vw;
+      height: 13rem;
+      background: #111;
+      z-index: 1200;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+    #scrollingTitleTrack {
+      display: flex;
+      align-items: center;
+      width: 200vw;
+      height: 100%;
+      will-change: transform;
+      animation: scrollTitle 18s linear infinite;
+    }
+    .scroll-title {
+      font-family: 'Recursive', sans-serif;
+      font-size: 11rem;
+      font-weight: 900;
+      color: #fff;
+      margin: 0 2.5rem;
+      display: inline-block;
+      transition: font-variation-settings 0.5s;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <section id="infoPage" style="display:none; width:100vw; height:100vh; background:#fff; color:#111; font-family:'Recursive',sans-serif; overflow:auto; position:fixed; top:0; left:0; z-index:1000;">
+    <header style="position:fixed; top:0; left:0; width:100vw; height:2.5rem; background:rgba(255,255,255,0.95); z-index:1100; display:flex; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.03); justify-content:flex-end;">
+      <button id="infoHomeButton" style="margin-right:2rem; font-size:1.3rem; font-family:'Recursive',sans-serif; font-weight:700; background:none; border:none; color:#111; cursor:pointer; padding:0.5rem 1.2rem; border-radius:0.5rem; transition:background 0.2s;">Home</button>
+    </header>
+
+    <div id="scrollingTitleBar" style="position:fixed; top:2.5rem; left:0; width:100vw; height:13rem; background:#111; z-index:1099; overflow:hidden; display:flex; align-items:center;">
+      <div id="scrollingTitleTrack" style="display:flex; align-items:center; width:100vw; height:100%; will-change:transform;"></div>
+    </div>
+
+    <div id="fontStylePanel" style="position:fixed; top:15.5rem; left:0; width:100vw; height:2.5rem; background:#f5f5f5; z-index:1098; display:flex; align-items:center; gap:2rem; padding:0 2rem; border-bottom:1px solid #ddd;">
+      <label style="font-size:1.1rem; font-weight:700; margin-right:0.5rem;">Weight</label>
+      <select id="styleWght" style="font-size:1.1rem; padding:0.2rem 0.7rem;">
+        <option value="300">300</option>
+        <option value="400" selected>400</option>
+        <option value="600">600</option>
+        <option value="800">800</option>
+        <option value="1000">1000</option>
+      </select>
+      <label style="font-size:1.1rem; font-weight:700; margin-left:1.5rem; margin-right:0.5rem;">Slant</label>
+      <select id="styleSlnt" style="font-size:1.1rem; padding:0.2rem 0.7rem;">
+        <option value="0" selected>0</option>
+        <option value="-5">-5</option>
+        <option value="-10">-10</option>
+        <option value="-15">-15</option>
+      </select>
+      <label style="font-size:1.1rem; font-weight:700; margin-left:1.5rem; margin-right:0.5rem;">CASL</label>
+      <select id="styleCasl" style="font-size:1.1rem; padding:0.2rem 0.7rem;">
+        <option value="0" selected>0</option>
+        <option value="0.25">0.25</option>
+        <option value="0.5">0.5</option>
+        <option value="0.75">0.75</option>
+        <option value="1">1</option>
+      </select>
+      <label style="font-size:1.1rem; font-weight:700; margin-left:1.5rem; margin-right:0.5rem;">MONO</label>
+      <select id="styleMono" style="font-size:1.1rem; padding:0.2rem 0.7rem;">
+        <option value="0" selected>0</option>
+        <option value="0.5">0.5</option>
+        <option value="1">1</option>
+      </select>
+  
+      <label for="styleFontSize" style="font-size:1.1rem; font-weight:700; margin-left:1.5rem; margin-right:0.5rem;">Font Size</label>
+      <input id="styleFontSize" type="range" min="2" max="5" step="0.1" value="2.2" style="width:120px; vertical-align:middle;">
+      <span id="fontSizeValue" style="font-size:1.1rem; margin-left:0.5rem;">2.2rem</span>
+    </div>
+    <main id="infoMain" style="width:100vw; margin:0; padding-top:23rem; padding-left:50px; padding-right:50px; word-break:break-word; overflow-wrap:break-word; white-space:normal; font-size:2.2rem; line-height:1.5; letter-spacing:normal;">
+      <style>
+        #infoMain h2 { font-size:2em; line-height:1.2; }
+        #infoMain p, #infoMain li, #infoMain span, #infoMain section, #infoMain dl, #infoMain dt, #infoMain dd, #infoMain ul { font-size:1em; line-height:1.5; letter-spacing:normal; }
+      </style>
+      <h2 style="font-size:4.5rem; font-weight:800; margin-bottom:2.5rem; text-align:left;">1.Variable Axes Recursive's Visual Grammar of Control</h2>
+      <p style="font-size:2.2rem; font-weight:600; margin-bottom:3rem; text-align:left;"><b>Recursive offers five core variable axes (wght, slnt, CASL, MONO, WONK)</b> that allow users to manipulate typographic form with high precision.<br>These axes go beyond functional styling; they enable nuanced articulation of visual tone and rhythm.</p>
+      <section style="margin-bottom:2.5rem;">
+        <b style="font-size:2.2rem; font-weight:900; display:block; margin-bottom:0.5rem; text-align:left;">wght (Weight)</b>
+        <span style="font-size:2rem;">Ranging from 300 to 1000, this axis controls the font's thickness—perfect for anything from delicate body text to bold display type.</span>
+      </section>
+      <section style="margin-bottom:2.5rem;">
+        <b style="font-size:2.2rem; font-weight:900; display:block; margin-bottom:0.5rem; text-align:left;">slnt (Slant)</b>
+        <span style="font-size:2rem;">Ranging from 0 to -15, this isn't traditional italic but a geometric slant, adding directionality, speed, and visual tension.</span>
+      </section>
+      <section style="margin-bottom:2.5rem;">
+        <b style="font-size:2.2rem; font-weight:900; display:block; margin-bottom:0.5rem; text-align:left;">CASL (Casual)</b>
+        <span style="font-size:2rem;">Adjusts the typographic tone from formal to relaxed. At 0, the shapes are strict and geometric; at 1, they become more handwritten and loose.</span>
+      </section>
+      <section style="margin-bottom:2.5rem;">
+        <b style="font-size:2.2rem; font-weight:900; display:block; margin-bottom:0.5rem; text-align:left;">MONO (Monospacing)</b>
+        <span style="font-size:2rem;">Transitions the type from proportional to monospaced. Great for establishing a grid-like visual rhythm or breaking it with intent.</span>
+      </section>
+      <section style="margin-bottom:2.5rem;">
+        <b style="font-size:2.2rem; font-weight:900; display:block; margin-bottom:0.5rem; text-align:left;">WONK</b>
+        <span style="font-size:2rem;">The most experimental axis. It introduces deliberate asymmetry and distortion, challenging typographic norms and embracing visual irregularity.<br>Each axis can be manipulated individually, but their true power lies in their combination—allowing Recursive to function not just as a font but as a modular system for typographic construction.</span>
+      </section>
+      <!-- 추가 정보 섹션 시작 -->
+      <h2 style="font-size:4rem; font-weight:900; margin:4rem 0 2.5rem 0; text-align:left;">2.Design Philosophy<br>Not a Typeface, but a System</h2>
+      <p style="font-size:2rem; font-weight:600; margin-bottom:2rem; text-align:left;">
+        Recursive isn't just a font family it's a design system. Created by Stephen Nixon, it emerged from a desire to build a typeface that would serve both code editors and expressive design environments—functional and emotional, precise yet flexible.
+      </p>
+      <p style="font-size:2rem; font-weight:700; margin-bottom:2rem; text-align:left;">
+        The core philosophy is that form is not fixed—it should adapt to context. Rather than offering a finite number of styles, Recursive encourages users to see type as a spectrum of potential states. This aligns type design with contemporary notions of interactivity, adaptability, and user-driven expression.
+      </p>
+      <p style="font-size:2rem; font-weight:700; margin-bottom:2rem; text-align:left;">
+        Axes like CASL, MONO, and WONK serve not only visual purposes but also bridge the gap between design and engineering, offering visual nuance to developers and logical structure to designers.
+      </p>
+      <p style="font-size:2rem; font-weight:600; margin-bottom:3rem; text-align:left;">
+        Recursive is thus less about choosing a style and more about constructing one—a shift from selection to authorship.
+      </p>
+      <h2 style="font-size:4rem; font-weight:900; margin:4rem 0 2.5rem 0; text-align:left;">3.Live Demo Typography as Interface</h2>
+      <p style="font-size:2rem; font-weight:600; margin-bottom:2rem; text-align:left;">
+        Recursive is natively built for interaction. This information panel demonstrates how users can not only view but manipulate typographic structures in real time.
+      </p>
+      <b style="display:block; font-size:2rem; font-weight:900; margin-bottom:1.2rem; text-align:left;">It includes:</b>
+      <ul style="font-size:2rem; font-weight:600; margin:0 0 2.5rem 0; text-align:left; list-style:disc inside;">
+        <li><b>2D Slider Interface</b><br>Horizontal movement controls wght, vertical controls slnt or CASL. With one gesture, users explore a rich space of visual variation.</li>
+        <li><b>Radial Interface</b><br>Outer ring: rotates to adjust wght<br>Middle ring: toggles or slides for slnt<br>Center ring: returns to default ("home") state</li>
+      </ul>
+      <p style="font-size:2rem; font-weight:700; margin-bottom:3rem; text-align:left;">
+        This setup transforms Recursive into a pedagogical and exploratory tool—not just a font but an interface for understanding the rules of form.
+      </p>
+      <h2 style="font-size:4rem; font-weight:900; margin:4rem 0 2.5rem 0; text-align:left;">4.Typeface Overview<br>Technical and Structural Information</h2>
+      <dl style="font-size:2rem; font-weight:700; margin:0 0 3rem 0; text-align:left;">
+        <dt><b>Name</b></dt><dd>Recursive</dd>
+        <dt><b>Designer</b></dt><dd>Stephen Nixon</dd>
+        <dt><b>Released</b></dt><dd>2020</dd>
+        <dt><b>License</b></dt><dd>Open Font License (OFL)</dd>
+        <dt><b>Format</b></dt><dd>OpenType Variable Font (.ttf, .woff2, etc.)</dd>
+        <dt><b>Distributed by</b></dt><dd>Google Fonts</dd>
+        <dt><b>Language Support</b></dt><dd>Latin Extended</dd>
+        <dt><b>Use Cases</b></dt><dd>Web design, UI/UX, coding environments, generative art, data visualization</dd>
+      </dl>
+      <p style="font-size:2rem; font-weight:600; margin-bottom:4rem; text-align:left;">
+        Recursive excels as a hybrid solution, supporting both expressive visual work and precise typographic needs in development. Its ability to switch between monospaced and proportional widths is particularly useful in maintaining typographic coherence across complex systems.
+      </p>
+      <h2 style="font-size:4rem; font-weight:900; margin:4rem 0 2.5rem 0; text-align:left;">5.Download &amp; More Information</h2>
+      <ul style="font-size:2rem; font-weight:700; margin:0 0 4rem 0; text-align:left; list-style:none; padding:0;">
+        <li style="margin-bottom:2rem;">
+          <a href="https://fonts.google.com/specimen/Recursive?query=Recursive&preview.text=Hellow" target="_blank" rel="noopener" style="color:#111; text-decoration:underline; font-weight:900; font-size:2.2rem;">Recursive on Google Fonts</a>
+        </li>
+      </ul>
+    </main>
+  </section>
+
+  <div class="opening">
+    <div class="title start" id="title">
+      <a href="https://fonts.google.com/specimen/Recursive" target="_blank" rel="noopener">Recursive</a>
+    </div>
+    <div class="click-hint" id="clickHint">Click anywhere to enter</div>
+    <div class="main-ui" id="mainUI">
+      <div class="menu-buttons">
+        <div class="menu-item" id="infoButton">Information</div>
+        <div class="menu-item" id="playgroundButton">Playground</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="playgroundPanel">
+    <div id="textSample" contenteditable="true">Recursive is typographic palette for UI & code. It draws inspiration from single-stroke casual, a style of brush writing used in signpainting that is stylistically flexible and warmly energetic. Recursive adapts this aesthetic basis into an extensive variable font family, designed to excel in digital interactive environments, including data-rich user interfaces, technical documentation, and code editors.</div>
+    <div class="slider-2d" id="slider2d"></div>
+    <div class="mouse-tracker" id="mouseTracker"></div>
+    <div class="transition-text" id="transitionText"></div>
+  </div>
+
+
+  <div id="typoCameraPanel" style="display: none;">
+    <div id="container">
+      <video id="video" autoplay playsinline></video>
+      <video id="maskVideo" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <div id="grid"></div>
+      <div id="textLayer">
+        <textarea id="editableText" spellcheck="false">타이포그래피는 fixed structure가 아니라, body의 tremble에 반응하는 sensory trace이며, moving image의 time-layer 위를 떠도는 조각이다.</textarea>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix"></script>
+
+  <script>
+
+    const state = {
+      infoPanelVisible: false,
+      playgroundVisible: false,
+      isSlanted: false,
+      rotation: {
+        current: { circle: 0 },
+        start: 0,
+        dragging: null
+      },
+      fontSettings: {
+        wght: 400,
+        CASL: 0,
+        MONO: 0,
+        slnt: 0
+      },
+      mouseTracking: {
+        active: false,
+        lastUpdate: 0
+      }
+    };
+
+    const ROTATION_SENSITIVITY = 0.5;
+    const FONT_UPDATE_THROTTLE = 16; // 약 60fps
+
+    function getAngle(element, event) {
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      return Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI;
+    }
+
+    function interpolateColors(color1, color2, ratio) {
+      return color1.map((c, i) => Math.round(c + (color2[i] - c) * ratio));
+    }
+
+    function setupMouseTracking(handle) {
+      const infoPanel = document.getElementById('playgroundPanel');
+      const textSample = document.getElementById('textSample');
+      const mouseTracker = document.getElementById('mouseTracker');
+      const transitionText = document.getElementById('transitionText');
+      let rafId = null;
+      let isUpdating = false;
+      let lastMouseX = 0;
+      let lastMouseY = 0;
+      
+
+      const updateBuffer = {
+        weight: state.fontSettings.wght,
+        casl: state.fontSettings.CASL,
+        mono: state.fontSettings.MONO,
+        color: null,
+        transform: ''
+      };
+
+
+      const previousFrame = {
+        weight: state.fontSettings.wght,
+        casl: state.fontSettings.CASL,
+        mono: state.fontSettings.MONO,
+        color: null
+      };
+
+      function updateTransitionText(xRatio, yRatio) {
+        const weight = Math.round(300 + xRatio * 700);
+        const casl = Math.round(yRatio * 100);
+        const mono = Math.round((1 - yRatio) * 100);
+        
+        transitionText.textContent = `Weight: ${weight} | Casual: ${casl}% | Mono: ${mono}%`;
+        transitionText.classList.add('visible');
+        
+
+        setTimeout(() => {
+          transitionText.classList.remove('visible');
+        }, 1000);
+      }
+
+      function pastelMix(color, whiteRatio) {
+
+        return color.map((c, i) => Math.round(c + (255 - c) * whiteRatio));
+      }
+
+      function getPastelCornerColor(cornerColor, centerColor, t) {
+
+        if (t < 0.5) {
+
+          return pastelMix(cornerColor, t * 2 * 0.7); // 0~0.7
+        } else {
+
+          return pastelMix(centerColor, (t - 0.5) * 2 * 1.0); // 0~1
+        }
+      }
+
+      function getCustomGradientColor(xRatio, yRatio) {
+
+        const topLeft = [144, 238, 144];    // 연한 초록
+        const topRight = [255, 255, 0];     // 노랑
+        const bottomLeft = [255, 0, 0];     // 빨강
+        const bottomRight = [0, 100, 0];    // 진한 초록
+        const center = [255, 255, 255];     // 흰색
+
+
+        const dTL = Math.sqrt(xRatio * xRatio + yRatio * yRatio) / Math.sqrt(2);
+        const dTR = Math.sqrt((1-xRatio)*(1-xRatio) + yRatio*yRatio) / Math.sqrt(2);
+        const dBL = Math.sqrt(xRatio*xRatio + (1-yRatio)*(1-yRatio)) / Math.sqrt(2);
+        const dBR = Math.sqrt((1-xRatio)*(1-xRatio) + (1-yRatio)*(1-yRatio)) / Math.sqrt(2);
+
+
+        const tTL = dTL;
+        const tTR = dTR;
+        const tBL = dBL;
+        const tBR = dBR;
+
+ 
+        const colorTL = getPastelCornerColor(topLeft, center, tTL);
+        const colorTR = getPastelCornerColor(topRight, center, tTR);
+        const colorBL = getPastelCornerColor(bottomLeft, center, tBL);
+        const colorBR = getPastelCornerColor(bottomRight, center, tBR);
+
+
+        const wTL = (1 - dTL);
+        const wTR = (1 - dTR);
+        const wBL = (1 - dBL);
+        const wBR = (1 - dBR);
+        const sum = wTL + wTR + wBL + wBR;
+
+        const final = [0,0,0];
+        for (let i=0; i<3; i++) {
+          final[i] = Math.round((colorTL[i]*wTL + colorTR[i]*wTR + colorBL[i]*wBL + colorBR[i]*wBR) / sum);
+        }
+        return final;
+      }
+
+      function updateStyles() {
+        if (!isUpdating) return;
+
+
+        const hasChanges = 
+          updateBuffer.weight !== previousFrame.weight ||
+          updateBuffer.casl !== previousFrame.casl ||
+          updateBuffer.mono !== previousFrame.mono ||
+          updateBuffer.color !== previousFrame.color;
+
+        if (hasChanges) {
+
+          textSample.style.fontVariationSettings = 
+            `'wght' ${updateBuffer.weight}, ` +
+            `'CASL' ${updateBuffer.casl}, ` +
+            `'MONO' ${updateBuffer.mono}, ` +
+            `'slnt' ${state.fontSettings.slnt}`;
+          
+
+          if (updateBuffer.color) {
+            infoPanel.style.backgroundColor = updateBuffer.color;
+          }
+
+
+          previousFrame.weight = updateBuffer.weight;
+          previousFrame.casl = updateBuffer.casl;
+          previousFrame.mono = updateBuffer.mono;
+          previousFrame.color = updateBuffer.color;
+        }
+
+        mouseTracker.style.transform = `translate(${lastMouseX}px, ${lastMouseY}px)`;
+        
+        rafId = requestAnimationFrame(updateStyles);
+      }
+
+
+      let lastEventTime = 0;
+      const eventThrottle = 1000 / 60; // 60fps
+
+      infoPanel.addEventListener('mousemove', (e) => {
+        if (state.rotation.dragging) return;
+        
+        const now = performance.now();
+        if (now - lastEventTime < eventThrottle) return;
+        lastEventTime = now;
+
+        const rect = infoPanel.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        
+        const xRatio = Math.max(0, Math.min(1, x / rect.width));
+        const yRatio = Math.max(0, Math.min(1, y / rect.height));
+        
+   
+        const targetWeight = Math.round(300 + xRatio * 700);
+        const targetCasl = yRatio;
+        const targetMono = 1 - yRatio;
+        
+
+        updateBuffer.weight = Math.round(updateBuffer.weight + (targetWeight - updateBuffer.weight) * 0.3);
+        updateBuffer.casl = updateBuffer.casl + (targetCasl - updateBuffer.casl) * 0.3;
+        updateBuffer.mono = updateBuffer.mono + (targetMono - updateBuffer.mono) * 0.3;
+        
+
+        updateBuffer.color = `rgb(${getCustomGradientColor(xRatio, yRatio).join(',')})`;
+        
+
+        updateTransitionText(xRatio, yRatio);
+        
+
+        if (!isUpdating) {
+          isUpdating = true;
+          rafId = requestAnimationFrame(updateStyles);
+        }
+      });
+
+
+      infoPanel.addEventListener('mouseleave', () => {
+        isUpdating = false;
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        mouseTracker.style.display = 'none';
+      });
+
+
+      infoPanel.addEventListener('mouseenter', () => {
+        mouseTracker.style.display = 'block';
+      });
+    }
+
+    function handleCircleRotation(e) {
+      if (state.rotation.dragging || e.target !== e.currentTarget) return;
+      
+      const element = e.currentTarget;
+      const textSample = document.getElementById('textSample');
+      state.rotation.dragging = 'circle';
+      state.rotation.start = getAngle(element, e);
+
+      let initialScale = 1;
+      const style = window.getComputedStyle(textSample);
+      const transform = style.transform;
+      if (transform && transform !== 'none') {
+        const matrix = new DOMMatrix(transform);
+        initialScale = matrix.a; // scaleX
+      }
+      let rafId = null;
+      let isUpdating = false;
+      const updateBuffer = {
+        scale: initialScale
+      };
+
+      function updateStyles() {
+        if (!isUpdating) return;
+        textSample.style.transform = `scale(${updateBuffer.scale})`;
+        textSample.style.transformOrigin = '50% 50%';
+        rafId = requestAnimationFrame(updateStyles);
+      }
+
+      function onMouseMove(moveEvent) {
+        const currentAngle = getAngle(element, moveEvent);
+        const delta = currentAngle - state.rotation.start;
+        const scaleChange = delta * 0.01; 
+        const newScale = Math.min(4, Math.max(0.1, initialScale + scaleChange));
+        updateBuffer.scale = newScale;
+        if (!isUpdating) {
+          isUpdating = true;
+          rafId = requestAnimationFrame(updateStyles);
+        }
+      }
+
+      function onMouseUp() {
+        isUpdating = false;
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        state.rotation.dragging = null;
+      }
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function setupCircularInterface() {
+      const slider2d = document.getElementById('slider2d');
+
+      const existingContainer = slider2d.querySelector('.circle-container');
+      if (existingContainer) {
+        existingContainer.remove();
+      }
+      const circleContainer = document.createElement('div');
+      circleContainer.classList.add('circle-container');
+
+
+      let isDragging = false;
+      let currentX;
+      let currentY;
+      let initialX;
+      let initialY;
+      let xOffset = 0;
+      let yOffset = 0;
+      let panX = 0;
+      let panY = 0;
+
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      function dragStart(e) {
+        if (e.target === circleContainer) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+
+          const transform = window.getComputedStyle(circleContainer).transform;
+          const matrix = new DOMMatrix(transform);
+          xOffset = matrix.m41;
+          yOffset = matrix.m42;
+          
+          initialX = e.clientX - xOffset;
+          initialY = e.clientY - yOffset;
+          isDragging = true;
+        }
+      }
+
+      function dragEnd(e) {
+        if (isDragging) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+      }
+
+      function drag(e) {
+        if (isDragging) {
+          e.preventDefault();
+          e.stopPropagation();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+          xOffset = currentX;
+          yOffset = currentY;
+          circleContainer.style.transform = `translate(${currentX}px, ${currentY}px)`;
+
+          const textSample = document.getElementById('textSample');
+
+          const sliderRect = circleContainer.getBoundingClientRect();
+          const sliderCenterX = sliderRect.left + sliderRect.width / 2;
+          const sliderCenterY = sliderRect.top + sliderRect.height / 2;
+
+          const offsetFromCenterX = sliderCenterX - centerX;
+          const offsetFromCenterY = sliderCenterY - centerY;
+
+          panX = -offsetFromCenterX * 1.2;
+          panY = -offsetFromCenterY * 1.2;
+
+          const style = window.getComputedStyle(textSample);
+          const transform = style.transform;
+          let scale = 1;
+          if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform);
+            scale = matrix.a;
+          }
+          textSample.style.transform = `scale(${scale}) translate(${panX}px, ${panY}px)`;
+        }
+      }
+
+      circleContainer.addEventListener('mousedown', dragStart, true);
+      document.addEventListener('mousemove', drag, true);
+      document.addEventListener('mouseup', dragEnd, true);
+
+
+      const outerCircle = document.createElement('div');
+      outerCircle.classList.add('circle-base', 'circle');
+
+
+      const sizeLabel = document.createElement('div');
+      sizeLabel.textContent = 'Size';
+      sizeLabel.style.position = 'absolute';
+      sizeLabel.style.top = '7%';
+      sizeLabel.style.left = '50%';
+      sizeLabel.style.transform = 'translate(-50%, 0)';
+      sizeLabel.style.fontWeight = 'bold';
+      sizeLabel.style.fontSize = '2.5rem';
+      sizeLabel.style.letterSpacing = '0.02em';
+      sizeLabel.style.color = '#000';
+      sizeLabel.style.pointerEvents = 'none';
+      sizeLabel.style.mixBlendMode = 'multiply';
+
+
+      const leftArrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      leftArrow.setAttribute('width', '48');
+      leftArrow.setAttribute('height', '48');
+      leftArrow.setAttribute('viewBox', '0 0 48 48');
+      leftArrow.style.position = 'absolute';
+      leftArrow.style.left = '4%';
+      leftArrow.style.top = '48%';
+      leftArrow.style.transform = 'translateY(-50%)';
+      leftArrow.style.pointerEvents = 'none';
+      leftArrow.innerHTML = '<polygon points="36,10 14,24 36,38" fill="#000"/>';
+
+      const rightArrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      rightArrow.setAttribute('width', '48');
+      rightArrow.setAttribute('height', '48');
+      rightArrow.setAttribute('viewBox', '0 0 48 48');
+      rightArrow.style.position = 'absolute';
+      rightArrow.style.right = '4%';
+      rightArrow.style.top = '48%';
+      rightArrow.style.transform = 'translateY(-50%) scaleX(-1)';
+      rightArrow.style.pointerEvents = 'none';
+      rightArrow.innerHTML = '<polygon points="36,10 14,24 36,38" fill="#000"/>';
+
+
+      const middleCircle = document.createElement('div');
+      middleCircle.classList.add('circle-base', 'circle-middle');
+      if (state.isSlanted) {
+        middleCircle.classList.add('slanted');
+      }
+
+      const slantLabel = document.createElement('div');
+      slantLabel.textContent = 'Slant';
+      slantLabel.style.position = 'absolute';
+      slantLabel.style.top = '13%';
+      slantLabel.style.left = '50%';
+      slantLabel.style.transform = 'translate(-50%, 0)';
+      slantLabel.style.fontWeight = 'bold';
+      slantLabel.style.fontSize = '2.2rem';
+      slantLabel.style.letterSpacing = '0.02em';
+      slantLabel.style.color = '#000';
+      slantLabel.style.mixBlendMode = 'multiply';
+      middleCircle.appendChild(slantLabel);
+
+      const innerCircle = document.createElement('div');
+      innerCircle.classList.add('circle-base', 'circle-inner');
+
+
+      const homeLabel = document.createElement('div');
+      homeLabel.textContent = 'Home';
+      homeLabel.style.position = 'absolute';
+      homeLabel.style.top = '43%';
+      homeLabel.style.left = '50%';
+      homeLabel.style.transform = 'translate(-50%, -50%)';
+      homeLabel.style.fontWeight = 'bold';
+      homeLabel.style.fontSize = '2.5rem';
+      homeLabel.style.letterSpacing = '0.02em';
+      homeLabel.style.color = '#000';
+      homeLabel.style.mixBlendMode = 'multiply';
+      innerCircle.appendChild(homeLabel);
+
+
+      middleCircle.appendChild(innerCircle);
+      outerCircle.appendChild(sizeLabel);
+      outerCircle.appendChild(leftArrow);
+      outerCircle.appendChild(rightArrow);
+      outerCircle.appendChild(middleCircle);
+
+
+      middleCircle.addEventListener('click', (e) => {
+        if (e.target !== middleCircle) return;
+        e.stopPropagation();
+        state.isSlanted = !state.isSlanted;
+        const newSlant = state.isSlanted ? -15 : 0;
+        if (state.isSlanted) {
+          middleCircle.classList.add('slanted');
+        } else {
+          middleCircle.classList.remove('slanted');
+        }
+        updateFontSettings('slant', newSlant);
+      });
+
+
+      innerCircle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        returnToMainUI();
+      });
+
+
+      outerCircle.addEventListener('mousedown', handleCircleRotation);
+
+      circleContainer.appendChild(outerCircle);
+      const handle = document.createElement('div');
+      handle.classList.add('handle');
+      slider2d.appendChild(circleContainer);
+      slider2d.appendChild(handle);
+      setupMouseTracking(handle);
+    }
+
+    function updateFontSettings(control, value) {
+      const textSample = document.getElementById('textSample');
+      
+      if (control === 'circle') {
+        const fontSize = 0.5 + (19.5 * value);
+        textSample.style.fontSize = `${fontSize}vw`;
+      } else if (control === '2d-slider') {
+        state.fontSettings.wght = Math.round(300 + value.x * 700);
+        state.fontSettings.CASL = value.y;
+        state.fontSettings.MONO = 1 - value.y;
+      } else if (control === 'slant') {
+        state.fontSettings.slnt = value;
+      }
+
+      textSample.style.fontVariationSettings = 
+        `'wght' ${state.fontSettings.wght}, ` +
+        `'CASL' ${state.fontSettings.CASL}, ` +
+        `'MONO' ${state.fontSettings.MONO}, ` +
+        `'slnt' ${state.fontSettings.slnt}`;
+    }
+
+    function resetFontSettings() {
+      state.fontSettings = {
+        wght: 400,
+        CASL: 0,
+        MONO: 0,
+        slnt: state.isSlanted ? -15 : 0
+      };
+      
+      const textSample = document.getElementById('textSample');
+      textSample.style.fontSize = '6vw';
+      updateFontSettings('reset');
+    }
+
+    function showPlayground() {
+      const playgroundPanel = document.getElementById('playgroundPanel');
+      const typoCameraPanel = document.getElementById('typoCameraPanel');
+      
+      if (!state.playgroundVisible) {
+        playgroundPanel.style.display = 'block';
+        typoCameraPanel.style.display = 'none';
+        setupCircularInterface();
+        state.playgroundVisible = true;
+        
+
+        const textSample = document.getElementById('textSample');
+        const text = textSample.textContent;
+        textSample.textContent = '';
+        textSample.classList.add('visible');
+        
+        let i = 0;
+        const typeInterval = setInterval(() => {
+          if (i < text.length) {
+            textSample.textContent += text[i];
+            i++;
+          } else {
+            clearInterval(typeInterval);
+          }
+        }, 50);
+        
+
+        if (state.isSlanted) {
+          const middleCircle = document.querySelector('.circle-middle');
+          if (middleCircle) {
+            middleCircle.classList.add('slanted');
+            updateFontSettings('slant', -15);
+          }
+        }
+      } else {
+        playgroundPanel.style.display = 'none';
+        state.playgroundVisible = false;
+        document.getElementById('textSample').classList.remove('visible');
+      }
+    }
+
+    function showInfo() {
+      const infoPanel = document.getElementById('infoPanel');
+      
+      if (!state.infoPanelVisible) {
+        infoPanel.style.display = 'flex';
+        state.infoPanelVisible = true;
+      } else {
+        infoPanel.style.display = 'none';
+        state.infoPanelVisible = false;
+      }
+    }
+
+    function initializeEventListeners() {
+
+      const infoButton = document.getElementById('infoButton');
+      if (infoButton) {
+        infoButton.addEventListener('click', () => {
+          document.body.classList.remove('no-transition');
+          document.querySelector('.opening').style.display = 'none';
+          document.getElementById('playgroundPanel').style.display = 'none';
+          document.getElementById('typoCameraPanel').style.display = 'none';
+          document.getElementById('infoPage').style.display = 'block';
+        });
+      }
+      const playgroundButton = document.getElementById('playgroundButton');
+      if (playgroundButton) {
+        playgroundButton.addEventListener('click', () => {
+          document.body.classList.remove('no-transition');
+          document.querySelector('.opening').style.display = 'none';
+          document.getElementById('infoPage').style.display = 'none';
+          document.getElementById('typoCameraPanel').style.display = 'none';
+          document.getElementById('playgroundPanel').style.display = 'block';
+          setupCircularInterface();
+          state.playgroundVisible = true;
+
+          const textSample = document.getElementById('textSample');
+          const text = textSample.textContent;
+          textSample.textContent = '';
+          textSample.classList.add('visible');
+          let i = 0;
+          const typeInterval = setInterval(() => {
+            if (i < text.length) {
+              textSample.textContent += text[i];
+              i++;
+            } else {
+              clearInterval(typeInterval);
+            }
+          }, 50);
+        });
+      }
+
+
+      const alreadyOpened = sessionStorage.getItem('alreadyOpened') === 'true';
+      const urlParams = new URLSearchParams(window.location.search);
+      const isOpened = urlParams.get('opened') === 'true';
+
+      if (alreadyOpened || isOpened) {
+        document.body.classList.add('entered', 'no-transition');
+        const title = document.getElementById('title');
+        if (title) title.classList.remove('start');
+        const clickHint = document.getElementById('clickHint');
+        if (clickHint) clickHint.classList.add('entered');
+        const mainUI = document.getElementById('mainUI');
+        if (mainUI) mainUI.classList.add('visible');
+        return;
+      }
+
+      setTimeout(() => {
+        document.body.addEventListener('click', enterSite, { once: true });
+        document.getElementById('clickHint').classList.add('visible');
+      }, 1000);
+
+
+      const title = document.getElementById('title');
+      if (title) {
+        title.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.location.href = 'typo-camera.html';
+        });
+
+        const titleLink = title.querySelector('a');
+        if (titleLink) {
+          titleLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'typo-camera.html';
+          });
+        }
+      }
+
+
+      const infoClose = document.getElementById('infoClose');
+      if (infoClose) {
+        infoClose.addEventListener('click', () => {
+          showInfo();
+        });
+      }
+
+      const infoHomeButton = document.getElementById('infoHomeButton');
+      if (infoHomeButton) {
+        infoHomeButton.addEventListener('click', () => {
+          returnToMainUI();
+        });
+      }
+    }
+
+    function enterSite(event) {
+      document.body.classList.add('entered');
+      sessionStorage.setItem('alreadyOpened', 'true');
+      const title = document.getElementById('title');
+      if (title) title.classList.remove('start');
+      const clickHint = document.getElementById('clickHint');
+      if (clickHint) clickHint.classList.add('entered');
+      const mainUI = document.getElementById('mainUI');
+      if (mainUI) mainUI.classList.add('visible');
+      setTimeout(() => {
+        document.getElementById('mainUI').classList.add('visible');
+      }, 2500);
+    }
+
+    let typoCameraState = {
+      isActive: false,
+      net: null,
+      lastSegmentation: null,
+      lastImageData: null,
+      frameCount: 0,
+      isProcessing: false,
+      isInteractionEnabled: false,
+      cells: [],
+      fixedText: [],
+      fixedStyles: [],
+      currentRow: 59
+    };
+
+
+    const wordList = [
+      'Fluidity', 'Instability', 'in', 'flux', 'unfixed', 'elastic', 'dissolve', 'leak', 'permeate',
+      'Body', 'Movement', 'gesture', 'pulse', 'breath', 'tremor', 'residue', 'trace',
+      'Sensation', 'Perception', 'sensing', 'haptic', 'touch', 'blur', 'surge', 'glitch',
+      'Time', 'Video', 'Frame', 'temporal', 'frame', 'latency', 'flicker', 'duration', 'live', 'collapse', 'fragment', 'shatter', 'unform', 're-code', 'drift'
+    ];
+
+
+    const fontStyles = [
+      '"wght" 300, "CASL" 0, "MONO" 0, "slnt" 0',
+      '"wght" 700, "CASL" 1, "MONO" 1, "slnt" -15',
+      '"wght" 1000, "CASL" 0.7, "MONO" 0, "slnt" -10',
+      '"wght" 400, "CASL" 0.3, "MONO" 1, "slnt" -5',
+      '"wght" 900, "CASL" 0.5, "MONO" 0, "slnt" 0',
+      '"wght" 600, "CASL" 0.8, "MONO" 1, "slnt" -12',
+      '"wght" 800, "CASL" 0.2, "MONO" 0, "slnt" -8',
+      '"wght" 500, "CASL" 0.9, "MONO" 1, "slnt" -11',
+      '"wght" 350, "CASL" 0.1, "MONO" 0, "slnt" -6',
+      '"wght" 750, "CASL" 0.6, "MONO" 1, "slnt" -13'
+    ];
+
+    function randomStyle() {
+      return fontStyles[Math.floor(Math.random() * fontStyles.length)];
+    }
+
+    function createScrollingTitles() {
+      const track = document.getElementById('scrollingTitleTrack');
+      track.innerHTML = '';
+      const count = 8;
+      const spans = [];
+      for (let i = 0; i < count; i++) {
+        const span = document.createElement('span');
+        span.textContent = 'Recursive';
+        span.className = 'scroll-title';
+        span.style.fontVariationSettings = randomStyle();
+        spans.push(span);
+      }
+ 
+      for (let i = 0; i < 2; i++) {
+        spans.forEach(s => track.appendChild(s.cloneNode(true)));
+      }
+    }
+
+    createScrollingTitles();
+
+
+    let scrollX = 0;
+    let trackWidth = 0;
+    function updateTrackWidth() {
+      const track = document.getElementById('scrollingTitleTrack');
+      if (!track) return;
+
+      let width = 0;
+      for (let i = 0; i < track.children.length / 2; i++) {
+        width += track.children[i].offsetWidth;
+      }
+      trackWidth = width;
+    }
+    window.addEventListener('resize', updateTrackWidth);
+    setTimeout(updateTrackWidth, 100); // 초기화
+    function animateScrollTitleSeamless() {
+      const track = document.getElementById('scrollingTitleTrack');
+      if (!track || !trackWidth) {
+        requestAnimationFrame(animateScrollTitleSeamless);
+        return;
+      }
+      scrollX -= 2.5; // 속도
+      if (Math.abs(scrollX) >= trackWidth) {
+        scrollX = 0;
+      }
+      track.style.transform = `translateX(${scrollX}px)`;
+      requestAnimationFrame(animateScrollTitleSeamless);
+    }
+    animateScrollTitleSeamless();
+
+
+    function returnToMainUI() {
+
+      const opening = document.querySelector('.opening');
+      if (opening) opening.style.display = 'block';
+
+      document.body.classList.add('entered');
+      const title = document.getElementById('title');
+      if (title) title.classList.remove('start');
+      const clickHint = document.getElementById('clickHint');
+      if (clickHint) clickHint.classList.add('entered');
+      const mainUI = document.getElementById('mainUI');
+      if (mainUI) mainUI.classList.add('visible');
+
+      const infoPanel = document.getElementById('infoPage');
+      if (infoPanel) infoPanel.style.display = 'none';
+      const playgroundPanel = document.getElementById('playgroundPanel');
+      if (playgroundPanel) playgroundPanel.style.display = 'none';
+      const typoCameraPanel = document.getElementById('typoCameraPanel');
+      if (typoCameraPanel) typoCameraPanel.style.display = 'none';
+
+      document.body.classList.remove('no-transition');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const infoHomeButton = document.getElementById('infoHomeButton');
+      if (infoHomeButton) {
+        infoHomeButton.onclick = returnToMainUI;
+      }
+
+      const title = document.getElementById('title');
+      if (title) {
+        title.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.location.href = 'typo-camera.html';
+        });
+
+        const titleLink = title.querySelector('a');
+        if (titleLink) {
+          titleLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'typo-camera.html';
+          });
+        }
+      }
+    });
+
+
+    (function(){
+      const main = document.getElementById('infoMain');
+      if (!main) return;
+      function updateFontVariation() {
+        const wght = document.getElementById('styleWght').value;
+        const slnt = document.getElementById('styleSlnt').value;
+        const casl = document.getElementById('styleCasl').value;
+        const mono = document.getElementById('styleMono').value;
+        main.style.fontVariationSettings = `'wght' ${wght}, 'slnt' ${slnt}, 'CASL' ${casl}, 'MONO' ${mono}`;
+      }
+      ['styleWght','styleSlnt','styleCasl','styleMono'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateFontVariation);
+      });
+      updateFontVariation();
+
+
+      const fontSizeInput = document.getElementById('styleFontSize');
+      const fontSizeValue = document.getElementById('fontSizeValue');
+      if (fontSizeInput && fontSizeValue) {
+
+        const selectorMap = [
+          { selector: 'h2', ratio: 2 },
+          { selector: 'p', ratio: 1 },
+          { selector: 'li', ratio: 1 },
+          { selector: 'span', ratio: 1 },
+          { selector: 'section', ratio: 1 },
+          { selector: 'ul', ratio: 1 },
+          { selector: 'dl', ratio: 1 },
+          { selector: 'dt', ratio: 1 },
+          { selector: 'dd', ratio: 1 }
+        ];
+        function updateFontSize() {
+          const size = parseFloat(fontSizeInput.value);
+          fontSizeValue.textContent = size + 'rem';
+          selectorMap.forEach(({selector, ratio}) => {
+            main.querySelectorAll(selector).forEach(el => {
+              el.style.fontSize = (size * ratio) + 'rem';
+            });
+          });
+        }
+        fontSizeInput.addEventListener('input', updateFontSize);
+        updateFontSize();
+      }
+    })();
+
+    initializeEventListeners();
+  </script>
+</body>
+</html>
+
